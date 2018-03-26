@@ -24,8 +24,6 @@ public class TopLikeAdapter  extends RecyclerView.Adapter<TopLikeAdapter.MyViewH
     private Context context;
     private List<Photo> topLikeLast;
 
-    private static final String LIST_TOP_LIKE = "LIST_TOP_LIKE";
-
 
     public TopLikeAdapter(Context context, List<Photo> list, List<Photo> topLikeLast) {
         this.photoList = list;
@@ -76,7 +74,7 @@ public class TopLikeAdapter  extends RecyclerView.Adapter<TopLikeAdapter.MyViewH
 
     private int getLikeCountLastUpdate(String photoId) {
         for (Photo photo : topLikeLast) {
-            if (photo.getId() == photoId) {
+            if (photo.getId().equals(photoId)) {
                 return photo.getTotalCount();
             }
         }

@@ -25,11 +25,14 @@ import com.facebook.GraphResponse;
 import com.facebook.HttpMethod;
 import com.facebook.login.LoginResult;
 import com.facebook.login.widget.LoginButton;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,6 +49,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private List<Photo> photos = new ArrayList<>();
     private List<Photo> topLikePhotos = new ArrayList<>();
+    private List<Photo> topLikeLast = new ArrayList<>();
 
     private RecyclerView recyclerView;
     private TopLikeAdapter mAdapter;
@@ -113,11 +117,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
 
 
-//        List<Photo> topLikeLast = (List<Photo>) PreferencesHelper.getInstance().getListValue(LIST_TOP_LIKE);
-//        if (topLikeLast == null) {
-//            topLikeLast = new ArrayList<>();
-//        }
-        List<Photo> topLikeLast = new ArrayList<>();
+        topLikeLast = getListFromPref();
+        if (topLikeLast == null) {
+            topLikeLast = new ArrayList<>();
+        }
+
+//        List<Photo> topLikeLast = new ArrayList<>();
+
         mAdapter = new TopLikeAdapter(this, topLikePhotos, topLikeLast);
         RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(getApplicationContext());
         recyclerView.setLayoutManager(mLayoutManager);
@@ -296,7 +302,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 topLikePhotos.clear();
                 mAdapter.notifyDataSetChanged();
                 progress.setTextColor(Color.RED);
-//                getLikeCount(top99PhotosPath);
+
+                topLikeLast = getListFromPref();
+
                 getAlbumSize();
                 break;
         }
@@ -312,4 +320,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         return cm.getActiveNetworkInfo() != null;
     }
+
+    private List<Photo> getListFromPref() {
+        Type listOfObjects = new TypeToken<List<Photo>>(){}.getType();
+
+        String json = PreferencesHelper.getInstance().getStringValue(LIST_TOP_LIKE, "");
+        List<Photo> list2 = new Gson().fromJson(json, listOfObjects);
+
+        return list2;
+    }
+
 }
