@@ -304,6 +304,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 progress.setTextColor(Color.RED);
 
                 topLikeLast = getListFromPref();
+                mAdapter.updateLastLike(topLikeLast);
 
                 getAlbumSize();
                 break;

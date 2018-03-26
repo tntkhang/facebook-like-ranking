@@ -31,6 +31,11 @@ public class TopLikeAdapter  extends RecyclerView.Adapter<TopLikeAdapter.MyViewH
         this.topLikeLast = topLikeLast;
     }
 
+    public void updateLastLike(List<Photo> data) {
+        topLikeLast.clear();
+        topLikeLast.addAll(data);
+    }
+
 
     public class MyViewHolder extends RecyclerView.ViewHolder {
         public TextView likeCount, name, likeCountLastUpdate;
