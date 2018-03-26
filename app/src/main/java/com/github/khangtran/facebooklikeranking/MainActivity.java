@@ -1,10 +1,17 @@
 package com.github.khangtran.facebooklikeranking;
 
+import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
+import android.net.ConnectivityManager;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.DefaultItemAnimator;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -16,92 +23,69 @@ import com.facebook.FacebookSdk;
 import com.facebook.GraphRequest;
 import com.facebook.GraphResponse;
 import com.facebook.HttpMethod;
-import com.facebook.ProfileTracker;
-import com.facebook.login.LoginManager;
 import com.facebook.login.LoginResult;
 import com.facebook.login.widget.LoginButton;
-import com.facebook.share.widget.ShareDialog;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+
+import khangtran.preferenceshelper.PreferencesHelper;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     private CallbackManager callbackManager;
-    private ProfileTracker profileTracker;
-    private LoginButton loginButton;
-    private String TAG = "MainActivity";
-    private String name, surname, imageUrl;
     private TextView tvTotalPhoto;
     private TextView progress;
-    private TextView progressDetail;
+//    private TextView progressDetail;
     private int totalCountPhoto;
-    private int detailPhotoCount;
-
-    private int startIndex = 0;
     private String top99PhotosPath = "/1208506309315145/photos?limit=99";
 
     private List<Photo> photos = new ArrayList<>();
     private List<Photo> topLikePhotos = new ArrayList<>();
 
+    private RecyclerView recyclerView;
+    private TopLikeAdapter mAdapter;
+    private Button btnStartScanning;
+
+    private static final String LIST_TOP_LIKE = "LIST_TOP_LIKE";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
         FacebookSdk.sdkInitialize(this);
+        setContentView(R.layout.activity_main);
         callbackManager = CallbackManager.Factory.create();
 
         tvTotalPhoto = (TextView) findViewById(R.id.total_photo);
         progress = (TextView) findViewById(R.id.progress);
-        progressDetail = (TextView) findViewById(R.id.progressDetail);
+        btnStartScanning = (Button) findViewById(R.id.startScanning);
+
+        PreferencesHelper.initHelper(this);
 
         AccessToken token;
         token = AccessToken.getCurrentAccessToken();
 
-        if (token != null) {
-            getAlbumSize();
+        if (isNetworkConnected()) {
+            if (token != null) {
+                getAlbumSize();
+                btnStartScanning.setEnabled(true);
+            } else {
+                btnStartScanning.setEnabled(false);
+            }
+        } else {
+            btnStartScanning.setEnabled(false);
+            Toast.makeText(this, "No internet connection !", Toast.LENGTH_LONG).show();
         }
-
         FacebookCallback<LoginResult> callback = new FacebookCallback<LoginResult>() {
             @Override
             public void onSuccess(LoginResult loginResult) {
                 GraphRequest request = GraphRequest.newMeRequest(loginResult.getAccessToken(), new GraphRequest.GraphJSONObjectCallback() {
                     @Override
                     public void onCompleted(JSONObject object, GraphResponse response) {
-//                        Log.e(TAG,object.toString());
-//                        Log.e(TAG,response.toString());
-//
-//                        try {
-//                            userId = object.getString("id");
-//                            profilePicture = new URL("https://graph.facebook.com/" + userId + "/picture?width=500&height=500");
-//                            if(object.has("first_name"))
-//                                firstName = object.getString("first_name");
-//                            if(object.has("last_name"))
-//                                lastName = object.getString("last_name");
-//                            if (object.has("email"))
-//                                email = object.getString("email");
-//                            if (object.has("birthday"))
-//                                birthday = object.getString("birthday");
-//                            if (object.has("gender"))
-//                                gender = object.getString("gender");
-//
-//                            Intent main = new Intent(LoginActivity.this,MainActivity.class);
-//                            main.putExtra("name",firstName);
-//                            main.putExtra("surname",lastName);
-//                            main.putExtra("imageUrl",profilePicture.toString());
-//                            startActivity(main);
-//                            finish();
-//                        } catch (JSONException e) {
-//                            e.printStackTrace();
-//                        } catch (MalformedURLException e) {
-//                            e.printStackTrace();
-//                        }
-
                         getAlbumSize();
                     }
                 });
@@ -121,8 +105,44 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         };
 
+        LoginButton loginButton = (LoginButton) findViewById(R.id.login_button);
         loginButton.setReadPermissions("email");
         loginButton.registerCallback(callbackManager, callback);
+
+
+        recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
+
+
+//        List<Photo> topLikeLast = (List<Photo>) PreferencesHelper.getInstance().getListValue(LIST_TOP_LIKE);
+//        if (topLikeLast == null) {
+//            topLikeLast = new ArrayList<>();
+//        }
+        List<Photo> topLikeLast = new ArrayList<>();
+        mAdapter = new TopLikeAdapter(this, topLikePhotos, topLikeLast);
+        RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(getApplicationContext());
+        recyclerView.setLayoutManager(mLayoutManager);
+        recyclerView.setItemAnimator(new DefaultItemAnimator());
+        recyclerView.setAdapter(mAdapter);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        AccessToken token;
+        token = AccessToken.getCurrentAccessToken();
+
+        if (isNetworkConnected()) {
+            if (token != null) {
+                getAlbumSize();
+                btnStartScanning.setEnabled(true);
+            } else {
+                btnStartScanning.setEnabled(false);
+            }
+        } else {
+            btnStartScanning.setEnabled(false);
+            Toast.makeText(this, "No internet connection !", Toast.LENGTH_LONG).show();
+        }
     }
 
     public void getAlbumSize() {
@@ -143,9 +163,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             String id = jsonObject.getString("id");
 
                             totalCountPhoto = Integer.parseInt(count);
-                            tvTotalPhoto.setText("Total count: " + count + "  -- " + id);
+                            tvTotalPhoto.setText("Total count: " + count);
 
-                            getTop10LikedCount(top99PhotosPath);
+                            getLikeCount(top99PhotosPath);
                         } catch (JSONException e) {
 
                         }
@@ -154,9 +174,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         ).executeAsync();
     }
 
-    public void getTop10LikedCount(String path) {
+    public void getLikeCount(String path) {
         Bundle parameters = new Bundle();
-        parameters.putString("limit", "99");
+        parameters.putString("limit", "50");
 
         new GraphRequest(
                 AccessToken.getCurrentAccessToken(),
@@ -185,10 +205,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 } else {
                                     photos.add(newPh);
                                     getDetail(newPh);
+
+                                    if (photos.size() == totalCountPhoto) {
+                                        progress.setTextColor(Color.GREEN);
+                                    }
                                 }
                             }
-
-                            progress.setText("Scan: " + photos.size() + "/" + totalCountPhoto);
 
                             if (jsonObject.has("paging")) {
                                 JSONObject paging = jsonObject.getJSONObject("paging");
@@ -199,14 +221,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 String path = "&after=" + after;
 
                                 if (photos.size() < totalCountPhoto) {
-                                    getTop10LikedCount(top99PhotosPath + path);
-                                    Log.e("tntkhang", "getTop10LikedCount next ---- " + top99PhotosPath + path);
-
-                                } else {
-                                    Log.e("tntkhang", "ALL DATA WAS GOT " + photos.size());
+                                    getLikeCount(top99PhotosPath + path);
                                 }
-                            } else {
-                                Toast.makeText(MainActivity.this, "FINISH SCANING", Toast.LENGTH_LONG).show();
                             }
                         } catch (JSONException e) {
                             e.printStackTrace();
@@ -233,13 +249,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             JSONObject summary = jsonObject.getJSONObject("summary");
                             String totalCount = summary.getString("total_count");
 
-                            Log.e("tntkhang", "ID: " +  photo.getId() + " - " + totalCount);
+                            progress.setText("Scan: " + photos.size() + "/" + totalCountPhoto);
+                            if (photos.size() == totalCountPhoto) {
+                                getDataDone();
+                            }
+
                             int totalCountInt = Integer.parseInt(totalCount);
                             if (totalCountInt > 500) {
                                 photo.setTotalCount(totalCountInt);
-                                topLikePhotos.add(photo);
-                                String textShow = "Like: " + totalCountInt + " - https://facebook.com/" + photo.getId() + "\n";
-                                progressDetail.setText(progressDetail.getText() + textShow);
+
+                                int addIndex = getIndexFromList(photo);
+
+                                topLikePhotos.add(addIndex, photo);
+
+                                mAdapter.notifyItemInserted(addIndex);
+
                             }
                         } catch (JSONException e) {
                             e.printStackTrace();
@@ -249,12 +273,43 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         ).executeAsync();
     }
 
+    private void getDataDone() {
+        progress.setText(progress.getText() + " DONE SCANNING");
+
+        PreferencesHelper.getInstance().setValue(LIST_TOP_LIKE, topLikePhotos);
+    }
+
+    private int getIndexFromList(Photo photo) {
+        for (int i = 0; i < topLikePhotos.size(); i++) {
+            if (photo.getTotalCount() > topLikePhotos.get(i).getTotalCount()) {
+                return i;
+            }
+        }
+        return topLikePhotos.size();
+    }
+
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
-            case R.id.logout:
-                LoginManager.getInstance().logOut();
+            case R.id.startScanning:
+                photos.clear();
+                topLikePhotos.clear();
+                mAdapter.notifyDataSetChanged();
+                progress.setTextColor(Color.RED);
+//                getLikeCount(top99PhotosPath);
+                getAlbumSize();
                 break;
         }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int responseCode, Intent intent) {
+        super.onActivityResult(requestCode, responseCode, intent);
+        callbackManager.onActivityResult(requestCode, responseCode, intent);
+    }
+
+    private boolean isNetworkConnected() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        return cm.getActiveNetworkInfo() != null;
     }
 }

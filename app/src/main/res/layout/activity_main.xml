@@ -15,49 +15,44 @@
         android:paddingBottom="12dp"/>
 
     <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:onClick="onClick"
-        android:text="Logout"
-        android:id="@+id/logout"
-        android:layout_alignParentTop="true"/>
-
-    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/logout">
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
+        android:onClick="onClick"
+        android:text="Start Scanning"
+        android:id="@+id/startScanning"
+        android:layout_margin="4dp"
+        android:background="@android:color/holo_red_dark"
+        android:textColor="@android:color/white"
+        android:layout_below="@+id/login_button"/>
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/total_photo"
-                android:textColor="@android:color/holo_red_light"/>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/total_photo"
+        android:layout_marginTop="10dp"
+        android:layout_marginLeft="4dp"
+        android:textSize="16dp"
+        android:textStyle="bold"
+        android:layout_below="@+id/startScanning"
+        android:textColor="@android:color/holo_red_light"/>
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/progress"
-                android:layout_marginTop="10dp"
-                android:textColor="@android:color/holo_red_light"/>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/progress"
+        android:layout_marginTop="10dp"
+        android:layout_marginLeft="4dp"
+        android:textSize="16dp"
+        android:textStyle="bold"
+        android:layout_below="@+id/total_photo"
+        android:textColor="@android:color/holo_red_light"/>
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:textStyle="bold"
-                android:text="Top Like:"
-                android:textColor="@android:color/holo_red_light"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/progressDetail"
-                android:layout_marginTop="10dp"/>
-
-        </LinearLayout>
-    </ScrollView>
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/recycler_view"
+        android:scrollbars="vertical"
+        android:layout_marginTop="10dp"
+        android:layout_below="@+id/progress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#e3e3e3"/>
 </RelativeLayout>
