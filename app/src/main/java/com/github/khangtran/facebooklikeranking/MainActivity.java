@@ -9,9 +9,13 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -34,6 +38,7 @@ import org.json.JSONObject;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import khangtran.preferenceshelper.PreferencesHelper;
@@ -43,7 +48,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private CallbackManager callbackManager;
     private TextView tvTotalPhoto;
     private TextView progress;
-//    private TextView progressDetail;
+    private TextView albumInfo;
+    private EditText edtAlbumUrl;
+    private LinearLayout lnLogin;
+    private LinearLayout lnMain;
     private int totalCountPhoto;
     private String top99PhotosPath = "/1208506309315145/photos?limit=99";
 
@@ -56,47 +64,67 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button btnStartScanning;
 
     private static final String LIST_TOP_LIKE = "LIST_TOP_LIKE";
+    private static final String ALBUM_URL = "ALBUM_URL";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        PreferencesHelper.initHelper(this);
         FacebookSdk.sdkInitialize(this);
         setContentView(R.layout.activity_main);
         callbackManager = CallbackManager.Factory.create();
 
-        tvTotalPhoto = (TextView) findViewById(R.id.total_photo);
-        progress = (TextView) findViewById(R.id.progress);
-        btnStartScanning = (Button) findViewById(R.id.startScanning);
+        tvTotalPhoto = findViewById(R.id.total_photo);
+        progress = findViewById(R.id.progress);
+        albumInfo = findViewById(R.id.album_info);
+        btnStartScanning = findViewById(R.id.startScanning);
+        edtAlbumUrl = findViewById(R.id.edt_album_url);
 
-        PreferencesHelper.initHelper(this);
+        lnLogin = findViewById(R.id.ln_login);
+        lnMain = findViewById(R.id.ln_main_view);
 
-        AccessToken token;
-        token = AccessToken.getCurrentAccessToken();
+        edtAlbumUrl.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
 
-        if (isNetworkConnected()) {
-            if (token != null) {
-                getAlbumSize();
-                btnStartScanning.setEnabled(true);
-            } else {
-                btnStartScanning.setEnabled(false);
             }
-        } else {
-            btnStartScanning.setEnabled(false);
-            Toast.makeText(this, "No internet connection !", Toast.LENGTH_LONG).show();
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+                PreferencesHelper.getInstance().setValue(ALBUM_URL, editable.toString());
+            }
+        });
+
+
+        if (PreferencesHelper.getInstance().contain(ALBUM_URL)) {
+            edtAlbumUrl.setText(PreferencesHelper.getInstance().getStringValue(ALBUM_URL, ""));
         }
+
+        checkLoginToken();
+
         FacebookCallback<LoginResult> callback = new FacebookCallback<LoginResult>() {
             @Override
             public void onSuccess(LoginResult loginResult) {
                 GraphRequest request = GraphRequest.newMeRequest(loginResult.getAccessToken(), new GraphRequest.GraphJSONObjectCallback() {
                     @Override
                     public void onCompleted(JSONObject object, GraphResponse response) {
-                        getAlbumSize();
+                        if (!edtAlbumUrl.getText().toString().equals("")) {
+                            getAlbumSize();
+                        }
                     }
                 });
                 Bundle parameters = new Bundle();
                 parameters.putString("fields", "id, first_name, last_name, email, birthday, gender , location");
                 request.setParameters(parameters);
                 request.executeAsync();
+
+                lnLogin.setVisibility(View.GONE);
+                lnMain.setVisibility(View.VISIBLE);
             }
 
             @Override
@@ -109,13 +137,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         };
 
-        LoginButton loginButton = (LoginButton) findViewById(R.id.login_button);
+        LoginButton loginButton = findViewById(R.id.login_button);
         loginButton.setReadPermissions("email");
         loginButton.registerCallback(callbackManager, callback);
 
 
-        recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
-
+        recyclerView = findViewById(R.id.recycler_view);
 
         topLikeLast = getListFromPref();
         if (topLikeLast == null) {
@@ -131,50 +158,65 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         recyclerView.setAdapter(mAdapter);
     }
 
+    private void setAlreadyLogin(boolean isLoggedIn) {
+        lnLogin.setVisibility(isLoggedIn ? View.GONE : View.VISIBLE);
+        lnMain.setVisibility(isLoggedIn ? View.VISIBLE : View.GONE);
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
 
-        AccessToken token;
-        token = AccessToken.getCurrentAccessToken();
+        checkLoginToken();
+    }
 
+    private void checkLoginToken() {
+        AccessToken token = AccessToken.getCurrentAccessToken();
         if (isNetworkConnected()) {
             if (token != null) {
                 getAlbumSize();
                 btnStartScanning.setEnabled(true);
-            } else {
-                btnStartScanning.setEnabled(false);
             }
+
+            setAlreadyLogin(token != null);
         } else {
             btnStartScanning.setEnabled(false);
             Toast.makeText(this, "No internet connection !", Toast.LENGTH_LONG).show();
         }
     }
 
+
     public void getAlbumSize() {
+        String albumId = getAlbumIdFromURL();
+        if (albumId.equals("")) return;
+
         Bundle parameters = new Bundle();
         parameters.putString("fields", "count");
 
         new GraphRequest(
                 AccessToken.getCurrentAccessToken(),
-                "/1208506309315145",
+                "/" + albumId,
                 parameters,
                 HttpMethod.GET,
                 new GraphRequest.Callback() {
                     public void onCompleted(GraphResponse response) {
+                        if (response.getError() == null) {
+                            try {
+                                JSONObject jsonObject = new JSONObject(response.getRawResponse());
+                                String count = jsonObject.getString("count");
+                                String id = jsonObject.getString("id");
 
-                        try {
-                            JSONObject jsonObject = new JSONObject(response.getRawResponse());
-                            String count = jsonObject.getString("count");
-                            String id = jsonObject.getString("id");
+                                totalCountPhoto = Integer.parseInt(count);
+                                tvTotalPhoto.setText("Total count: " + count);
 
-                            totalCountPhoto = Integer.parseInt(count);
-                            tvTotalPhoto.setText("Total count: " + count);
-
-                            getLikeCount(top99PhotosPath);
-                        } catch (JSONException e) {
-
+                                getLikeCount(top99PhotosPath);
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                        } else {
+                            tvTotalPhoto.setText(response.getError().getErrorMessage());
                         }
+
                     }
                 }
         ).executeAsync();
@@ -196,12 +238,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             JSONObject jsonObject = new JSONObject(response.getRawResponse());
                             JSONArray dataObj = jsonObject.getJSONArray("data");
 
-                            for (int i =0; i < dataObj.length(); i++) {
+                            for (int i = 0; i < dataObj.length(); i++) {
                                 JSONObject eachPhoto = dataObj.getJSONObject(i);
                                 String createdTime = eachPhoto.getString("created_time");
                                 String name = "";
                                 if (eachPhoto.has("name")) {
-                                   name = eachPhoto.getString("name");
+                                    name = eachPhoto.getString("name");
                                 }
                                 String id = eachPhoto.getString("id");
 
@@ -237,7 +279,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }
         ).executeAsync();
     }
-    
+
     private void getDetail(final Photo photo) {
         Bundle parameters = new Bundle();
         parameters.putString("fields", "count");
@@ -280,7 +322,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void getDataDone() {
-        progress.setText(progress.getText() + " DONE SCANNING");
+//        progress.setText(progress.getText() + " DONE SCANNING");
 
         PreferencesHelper.getInstance().setValue(LIST_TOP_LIKE, topLikePhotos);
     }
@@ -304,12 +346,29 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 progress.setTextColor(Color.RED);
 
                 topLikeLast = getListFromPref();
-                mAdapter.updateLastLike(topLikeLast);
+                if (topLikeLast != null && topLikeLast.size() > 0) {
+                    mAdapter.updateLastLike(topLikeLast);
+                }
 
                 getAlbumSize();
                 break;
         }
     }
+
+    private String getAlbumIdFromURL() {
+        String url = edtAlbumUrl.getText().toString();
+        if (!url.isEmpty()) {
+            int from = url.indexOf("a.");
+//            int end = url.indexOf("&type");
+
+            String idContain = url.substring(from);
+
+            String[] words = idContain.split("\\.");
+            return words[1];
+        }
+        return "";
+    }
+
 
     @Override
     protected void onActivityResult(int requestCode, int responseCode, Intent intent) {
@@ -323,7 +382,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private List<Photo> getListFromPref() {
-        Type listOfObjects = new TypeToken<List<Photo>>(){}.getType();
+        Type listOfObjects = new TypeToken<List<Photo>>() {
+        }.getType();
 
         String json = PreferencesHelper.getInstance().getStringValue(LIST_TOP_LIKE, "");
         List<Photo> list2 = new Gson().fromJson(json, listOfObjects);

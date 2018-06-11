@@ -20,9 +20,9 @@ import khangtran.preferenceshelper.PreferencesHelper;
 
 public class TopLikeAdapter  extends RecyclerView.Adapter<TopLikeAdapter.MyViewHolder> {
 
-    private List<Photo> photoList;
+    private List<Photo> photoList = new ArrayList<>();
     private Context context;
-    private List<Photo> topLikeLast;
+    private List<Photo> topLikeLast = new ArrayList<>();
 
 
     public TopLikeAdapter(Context context, List<Photo> list, List<Photo> topLikeLast) {

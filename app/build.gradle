@@ -30,5 +30,5 @@ dependencies {
 
     implementation 'com.facebook.android:facebook-android-sdk:4.18.0'
     implementation 'com.google.code.gson:gson:2.8.2'
-    compile 'com.github.tntkhang:preferences-helper:1.1.0'
+    implementation 'com.github.tntkhang:preferences-helper:1.1.0'
 }
