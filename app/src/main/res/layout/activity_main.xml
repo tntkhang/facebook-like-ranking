@@ -53,15 +53,35 @@
             android:hint="Album URL"
             android:textStyle="bold" />
 
-        <Button
-            android:id="@+id/startScanning"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_margin="4dp"
-            android:background="@android:color/holo_red_dark"
-            android:onClick="onClick"
-            android:text="Start Scanning"
-            android:textColor="@android:color/white" />
+            android:orientation="horizontal"
+            android:layout_margin="10dp"
+            android:gravity="center_vertical"
+            >
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="20sp"
+                android:text="Get top like: "/>
+
+            <Spinner
+                android:id="@+id/top_spinner"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="10dp"/>
+
+            <Button
+                android:id="@+id/startScanning"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="4dp"
+                android:background="@android:color/holo_red_dark"
+                android:onClick="onClick"
+                android:text="Start Scanning"
+                android:textColor="@android:color/white" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/album_info"
