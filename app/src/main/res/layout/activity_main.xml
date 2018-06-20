@@ -51,7 +51,9 @@
             android:textColor="@android:color/black"
             android:textSize="16dp"
             android:hint="Album URL"
-            android:textStyle="bold" />
+            android:maxLines="1"
+            android:inputType="text"
+            android:textStyle="bold"/>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -64,12 +66,16 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="20sp"
-                android:text="Get top like: "/>
+                android:text="Filter like: "/>
 
-            <Spinner
-                android:id="@+id/top_spinner"
-                android:layout_width="wrap_content"
+            <EditText
+                android:id="@+id/edt_top"
+                android:layout_width="80dp"
                 android:layout_height="wrap_content"
+                android:inputType="number"
+                android:text="100"
+                android:maxLines="1"
+                android:textAlignment="textEnd"
                 android:layout_margin="10dp"/>
 
             <Button

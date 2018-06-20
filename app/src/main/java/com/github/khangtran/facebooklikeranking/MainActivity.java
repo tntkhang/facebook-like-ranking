@@ -54,11 +54,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private TextView progress;
     private TextView albumInfo;
     private EditText edtAlbumUrl;
-    private Spinner spinner;
+    private EditText edtTopLike;
     private LinearLayout lnLogin;
     private LinearLayout lnMain;
     private int totalCountPhoto;
-    private String top99PhotosPath = "/1208506309315145/photos?limit=99";
+    private String top99PhotosPath = "/photos?limit=99";
 
     private List<Photo> photos = new ArrayList<>();
     private List<Photo> topLikePhotos = new ArrayList<>();
@@ -72,6 +72,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private static final String LIST_TOP_LIKE = "LIST_TOP_LIKE";
     private static final String ALBUM_URL = "ALBUM_URL";
+    private static final String NUMBER_TOP_LIKE = "NUMBER_TOP_LIKE";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,50 +87,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         albumInfo = findViewById(R.id.album_info);
         btnStartScanning = findViewById(R.id.startScanning);
         edtAlbumUrl = findViewById(R.id.edt_album_url);
-        spinner = findViewById(R.id.top_spinner);
+        edtTopLike = findViewById(R.id.edt_top);
 
         lnLogin = findViewById(R.id.ln_login);
         lnMain = findViewById(R.id.ln_main_view);
 
-
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
-                R.array.top_array, android.R.layout.simple_spinner_item);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinner.setAdapter(adapter);
-        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                topLike = (int) adapterView.getItemAtPosition(i);
-                Log.i("tntkhang", "Topliek: " + topLike);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> adapterView) {
-
-            }
-        });
-
-        edtAlbumUrl.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-
-            }
-
-            @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable editable) {
-                PreferencesHelper.getInstance().setValue(ALBUM_URL, editable.toString());
-            }
-        });
-
-
         if (PreferencesHelper.getInstance().contain(ALBUM_URL)) {
             edtAlbumUrl.setText(PreferencesHelper.getInstance().getStringValue(ALBUM_URL, ""));
         }
+        if (PreferencesHelper.getInstance().contain(NUMBER_TOP_LIKE)) {
+            edtTopLike.setText(PreferencesHelper.getInstance().getIntValue(NUMBER_TOP_LIKE, 0) + "");
+        }
+
 
         checkLoginToken();
 
@@ -200,7 +169,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         AccessToken token = AccessToken.getCurrentAccessToken();
         if (isNetworkConnected()) {
             if (token != null) {
-                getAlbumSize();
                 btnStartScanning.setEnabled(true);
             }
 
@@ -213,7 +181,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 
     public void getAlbumSize() {
-        String albumId = getAlbumIdFromURL();
+        final String albumId = getAlbumIdFromURL();
         if (albumId.equals("")) return;
 
         Bundle parameters = new Bundle();
@@ -235,7 +203,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 totalCountPhoto = Integer.parseInt(count);
                                 tvTotalPhoto.setText("Total count: " + count);
 
-                                getLikeCount(top99PhotosPath);
+                                getLikeCount("/" + albumId + "/" + top99PhotosPath);
                             } catch (JSONException e) {
                                 e.printStackTrace();
                             }
@@ -248,13 +216,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         ).executeAsync();
     }
 
-    public void getLikeCount(String path) {
+    public void getLikeCount(final String urlPath) {
         Bundle parameters = new Bundle();
         parameters.putString("limit", "50");
 
         new GraphRequest(
                 AccessToken.getCurrentAccessToken(),
-                path,
+                urlPath,
                 parameters,
                 HttpMethod.GET,
                 new GraphRequest.Callback() {
@@ -295,7 +263,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 String path = "&after=" + after;
 
                                 if (photos.size() < totalCountPhoto) {
-                                    getLikeCount(top99PhotosPath + path);
+                                    getLikeCount(urlPath + path);
                                 }
                             }
                         } catch (JSONException e) {
@@ -329,7 +297,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             }
 
                             int totalCountInt = Integer.parseInt(totalCount);
-                            if (totalCountInt > 500) {
+                            if (totalCountInt > topLike) {
                                 photo.setTotalCount(totalCountInt);
 
                                 int addIndex = getIndexFromList(photo);
@@ -375,22 +343,31 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (topLikeLast != null && topLikeLast.size() > 0) {
                     mAdapter.updateLastLike(topLikeLast);
                 }
+                topLike = Integer.parseInt(edtTopLike.getText().toString());
+                PreferencesHelper.getInstance().setValue(NUMBER_TOP_LIKE, topLike);
+                PreferencesHelper.getInstance().setValue(ALBUM_URL, edtAlbumUrl.getText().toString());
 
                 getAlbumSize();
                 break;
         }
     }
 
+    // https://www.facebook.com/pg/aeonmalltanphuceladon/photos/?tab=album&album_id=1126955914148390
     private String getAlbumIdFromURL() {
         String url = edtAlbumUrl.getText().toString();
         if (!url.isEmpty()) {
-            int from = url.indexOf("a.");
-//            int end = url.indexOf("&type");
+            if (url.contains("album_id=")) {
+                int from = url.indexOf("album_id=");
+                String albumId = url.substring(from+9);
+                return albumId;
+            } else if (url.contains("a.")) {
+                int from = url.indexOf("a.");
 
-            String idContain = url.substring(from);
+                String idContain = url.substring(from);
 
-            String[] words = idContain.split("\\.");
-            return words[1];
+                String[] words = idContain.split("\\.");
+                return words[1];
+            }
         }
         return "";
     }
